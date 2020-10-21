@@ -183,7 +183,7 @@ class RandomCrop(object):
             if label is None:
                 return im
             else:
-                return im, label)
+                return im, label
         else:
             pad_height = max(crop_height - img_height, 0)
             pad_width = max(crop_width - img_width, 0)
@@ -243,7 +243,7 @@ class RandomScale(object):
         self.min_scale = min_scale
         self.aspect_ratio = aspect_ratio
 
-    def __call__(self, img, label=None):
+    def __call__(self, im, label=None):
         if self.min_scale != 0 and self.aspect_ratio != 0:
             img_height = im.shape[0]
             img_width = im.shape[1]
@@ -281,19 +281,13 @@ class RandomScale(object):
 
 
 def main():
-    image = cv2.imread('./dummy_data/JPEGImages/2008_000064.jpg')
-    label = cv2.imread('./dummy_data/GroundTruth_trainval_png/2008_000064.png')
-    
-    print(image)
-    print(label)
+    image = cv2.imread('/home/aistudio/work/dummy_data/JPEGImages/2008_000064.jpg')
+    label = cv2.imread('/home/aistudio/work/dummy_data/GroundTruth_trainval_png/2008_000064.png')
+
     # TODO: crop_size
     # TODO: Transform: RandomSacle, RandomFlip, Pad, RandomCrop
     crop_size = 100
-    transform = Compose(RandomScale(), 
-                        RandomFlip(), 
-                        Pad(size=5),
-                        RandomCrop(crop_size=crop_size)
-                        )
+    transform = Compose([RandomScale(), RandomFlip(), Pad(size=5), RandomCrop(crop_size=crop_size)])
 
     for i in range(10):
         ti, tl = transform(image, label)

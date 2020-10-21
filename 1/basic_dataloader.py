@@ -8,10 +8,11 @@ class Transform(object):
     def __init__(self, size=256):
         self.size = size
     
-    def __call__(self, input, label):
-        input = cv2.resize(input, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
+    def __call__(self, image, label):
+        image = cv2.resize(image, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
         label = cv2.resize(label, (self.size, self.size), interpolation=cv2.INTER_NEAREST)
-
+        
+        return image, label
 class BasicDataLoader():
     def __init__(self,
                  image_folder,
@@ -32,8 +33,9 @@ class BasicDataLoader():
                 data_path = os.path.join(self.image_folder, line.split()[0])
                 label_path = os.path.join(self.image_folder, line.split()[1])
                 data_list.append((data_path,label_path))
-        
+                #print(data_path, label_path)
         random.shuffle(data_list)
+        #print(data_list)
         return data_list
 
     def preprocess(self, data, label):
@@ -54,9 +56,13 @@ class BasicDataLoader():
 
     def __call__(self):
         for data_path, label_path in self.data_list:
+            print(data_path)
+            print(label_path)
             data = cv2.imread(data_path, cv2.IMREAD_COLOR)
             data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
-            label = cv2.imread(label_path, cv2.IMAGE_GRAYSCALE)
+            label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+            #print(data)
+            #print(label)
             data, label = self.preprocess(data, label)
             yield data, label
 
@@ -68,13 +74,13 @@ def main():
     place = fluid.CUDAPlace(0)
     with fluid.dygraph.guard(place):
         # TODO: craete BasicDataloder instance
-        # image_folder="./dummy_data"
-        # image_list_file="./dummy_data/list.txt"
+        image_folder="/home/aistudio/work/dummy_data"
+        image_list_file="/home/aistudio/work/dummy_data/list.txt"
 
         transform = Transform(256)
         basic_dataloader = BasicDataLoader(
-                image_folder='',
-                image_list_file='',
+                image_folder=image_folder,
+                image_list_file=image_list_file,
                 transform=transform,
                 shuffle=True
             )
