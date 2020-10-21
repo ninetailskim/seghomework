@@ -4,6 +4,14 @@ import numpy as np
 import cv2
 import paddle.fluid as fluid
 
+class Transform(object):
+    def __init__(self, size=256):
+        self.size = size
+    
+    def __call__(self, input, label):
+        input = cv2.resize(input, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
+        label = cv2.resize(label, (self.size, self.size), interpolation=cv2.INTER_NEAREST)
+
 class BasicDataLoader():
     def __init__(self,
                  image_folder,
@@ -24,9 +32,21 @@ class BasicDataLoader():
                 data_path = os.path.join(self.image_folder, line.split()[0])
                 label_path = os.path.join(self.image_folder, line.split()[1])
                 data_list.append((data_path,label_path))
+        
+        random.shuffle(data_list)
         return data_list
 
     def preprocess(self, data, label):
+        h, w, c = data.shape
+        h_gt, w_gt = label.shape
+        assert h==h_gt, "Error"
+        assert w==w_gt, "Error"
+
+        if self.transform:
+            data, label = self.transform(data, label)
+        
+        label = label[:,:,np.newaxis]
+        return data, label
 
     def __len__(self):
         return len(self.data_list)
@@ -38,7 +58,7 @@ class BasicDataLoader():
             data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
             label = cv2.imread(label_path, cv2.IMAGE_GRAYSCALE)
             data, label = self.preprocess(data, label)
-            yeild data, label
+            yield data, label
 
 
 
@@ -50,10 +70,12 @@ def main():
         # TODO: craete BasicDataloder instance
         # image_folder="./dummy_data"
         # image_list_file="./dummy_data/list.txt"
+
+        transform = Transform(256)
         basic_dataloader = BasicDataLoader(
                 image_folder='',
                 image_list_file='',
-                transform=None,
+                transform=transform,
                 shuffle=True
             )
         # TODO: craete fluid.io.DataLoader instance
