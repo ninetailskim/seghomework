@@ -29,7 +29,17 @@ def train(dataloader, model, criterion, optimizer, epoch, total_batch):
     train_loss_meter = AverageMeter()
     for batch_id, data in enumerate(dataloader):
         #TODO:
+        image = data[0]
+        ##print(image)
+        label = data[1]
 
+        image = fluid.layers.transpose(image, [0, 3, 1, 2])
+        pred = model(image)
+        loss = criterion(pred, label)
+
+        loss.backward()
+        optimizer.minimize(loss)
+        model.clear_gradients()
 
         n = image.shape[0]
         train_loss_meter.update(loss.numpy()[0], n)
@@ -46,19 +56,25 @@ def main():
     place = paddle.fluid.CUDAPlace(0)
     with fluid.dygraph.guard(place):
         # Step 1: Define training dataloader
-
-        #TODO: create dataloader
+        basic_augmentation = TrainAugmentation(image_size=256)
+        basic_dataloader = BasicDataLoader(image_folder=args.image_folder,
+                                            image_list_file=args.image_list_file,
+                                            transform=basic_augmentation,
+                                            shuffle=True)
+        train_dataloader = fluid.io.DataLoader.from_generator(capacity=10, use_multiprocess=True)
+        train_dataloader.set_sample_generator(basic_dataloader, batch_size=args.batch_size, places=place)
+        total_batch = int(len(basic_dataloader) / args.batch_size)
 
         
         # Step 2: Create model
         if args.net == "basic":
-            #TODO: create basicmodel
+            model = BasicModel()
         else:
             raise NotImplementedError(f"args.net: {args.net} is not Supported!")
 
         # Step 3: Define criterion and optimizer
         criterion = Basic_SegLoss
-
+        optimizer = AdamOptimizer(learning_rate=args.lr, parameter_list=model.parameters())
         # create optimizer
         
         # Step 4: Training
@@ -75,9 +91,10 @@ def main():
                 model_path = os.path.join(args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{train_loss}")
 
                 # TODO: save model and optmizer states
-
-
-
+                model_dict = model.state_dict()
+                fluid.save_dygraph(model_dict, model_path)
+                optimizer_dict = optimizer.state_dict()
+                fluid.save_dygraph(optimizer_dict, model_path)
                 print(f'----- Save model: {model_path}.pdparams')
                 print(f'----- Save optimizer: {model_path}.pdopt')
 
